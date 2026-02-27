@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+pdfplumber
+fastapi
+uvicorn[standard]
+pdfplumber
+langchain
+langchain-community
+chromadb
+sentence-transformers
+pydantic
+python-multipart
+# For Ollama you typically just use langchain-community's Ollama integration
+# and an underlying request library normally installed with langchain
+httpx
