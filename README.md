@@ -1,4 +1,4 @@
-# AI Contract Risk Analyzer
+# LawLens
 
 A full-stack application for analyzing contract risks using AI.
 

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import ChatbotPage from './pages/ChatbotPage';
 
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,7 +40,7 @@ function App() {
                 {/* Public Route */}
                 <Route
                     path="/login"
-                    element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
+                    element={isAuthenticated ? <Navigate to="/analyze" replace /> : <Login onLogin={handleLogin} />}
                 />
 
                 {/* Protected Layout Routes */}
@@ -48,9 +49,10 @@ function App() {
                         <Layout onLogout={handleLogout} />
                     </ProtectedRoute>
                 }>
-                    <Route index element={<Navigate to="/dashboard" replace />} />
+                    <Route index element={<Navigate to="/analyze" replace />} />
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="analyze" element={<Dashboard />} /> {/* For now, point to Dashboard */}
+                    <Route path="chatbot" element={<ChatbotPage />} />
                     <Route path="settings" element={
                         <div className="p-8 bg-white rounded-xl shadow-sm border border-gray-200">
                             <h2 className="text-xl font-bold">Settings</h2>
