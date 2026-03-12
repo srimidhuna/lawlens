@@ -8,11 +8,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def evaluate_clause_with_rules(clause_text: str) -> dict | None:
+def evaluate_clause_with_rules(clause_text: str, role: str = "") -> dict | None:
     """
     Evaluates a single clause against deterministic rules.
     If a rule matches, returns the clause dict.
     Otherwise, returns None.
+    Role is used to apply role-specific rules (e.g. land rules only for land_owner).
     """
     text = clause_text.lower()
     short_text = clause_text[:100].strip() + "..." if len(clause_text) > 100 else clause_text.strip()
@@ -47,6 +48,25 @@ def evaluate_clause_with_rules(clause_text: str) -> dict | None:
     # Rule 7: Arbitration controlled by one party
     if "arbitration" in text and any(x in text for x in ["sole", "exclusive", "unilateral"]):
         return _build_clause_result(short_text, "MEDIUM", 5, "Arbitration appears to be one-sided.", "If there's a dispute, the other party has too much control over how it's resolved.", "One-sided arbitration")
+
+    # --- Land Registration Specific Rules (only for land_owner role) ---
+    if role.lower() == "land_owner":
+
+        # Rule 8: Encumbrance / Lien on land (use word boundary for 'lien' to avoid matching 'client')
+        if any(x in text for x in ["encumbrance", "mortgage", "charge on the property", "hypothecation"]) or re.search(r'\blien\b', text):
+            return _build_clause_result(short_text, "HIGH", 9, "Land has existing encumbrances, liens, or mortgages that could affect ownership.", "The land may have debts or legal claims attached to it that could cause problems for you.", "Encumbrance/lien detected")
+
+        # Rule 9: Title defect
+        if any(x in text for x in ["title defect", "defective title", "disputed title", "unclear title", "title not clear"]):
+            return _build_clause_result(short_text, "HIGH", 9, "Possible title defect detected — ownership may be legally contested.", "There may be problems with who legally owns this land, which could lead to disputes.", "Title defect detected")
+
+        # Rule 10: Boundary dispute
+        if any(x in text for x in ["boundary dispute", "disputed boundary", "boundary not demarcated", "encroachment"]):
+            return _build_clause_result(short_text, "MEDIUM", 6, "Potential boundary dispute or unclear demarcation detected.", "The exact boundaries of the land may not be clear, which could lead to neighbor disputes.", "Boundary dispute detected")
+
+        # Rule 11: Easement / Right of way
+        if any(x in text for x in ["easement", "right of way", "right of passage", "servitude"]):
+            return _build_clause_result(short_text, "MEDIUM", 5, "Third-party easement or right of way exists on the property.", "Someone else may have the legal right to pass through or use part of this land.", "Easement/right of way detected")
 
     return None
 

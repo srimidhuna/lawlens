@@ -37,6 +37,17 @@ ai-contract-risk-analyzer/
 - Node.js 18+
 - [Ollama](https://ollama.ai/) installed locally for running language models
 
+### Scanned PDF Support (OCR)
+
+The PDF text extraction uses a 3-tier pipeline:
+
+- **Tier 1 — pdfplumber**: Works automatically for digital/text-based PDFs. No extra setup needed.
+- **Tier 2 — Llama 4 Scout Vision**: Uses the existing `GROQ_API_KEY` (already in your `.env`) with no extra setup needed. Activates automatically when pdfplumber returns insufficient text from a scanned PDF.
+- **Tier 3 — pytesseract (optional offline fallback)**: Only used if the Groq API is unavailable. Requires system-level OCR dependencies:
+  - **Ubuntu/Debian**: `sudo apt-get install tesseract-ocr poppler-utils`
+  - **macOS**: `brew install tesseract poppler`
+  - **Windows**: Install [Tesseract OCR](https://github.com/UB-Mannheim/tesseract) and [Poppler](https://github.com/oschwartz10612/poppler-windows) from GitHub
+
 ### Backend Setup
 
 1. Navigate to the backend directory:

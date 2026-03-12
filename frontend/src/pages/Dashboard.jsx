@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { CloudUpload, AlertCircle, CheckCircle, HelpCircle, ChevronDown, ChevronUp, Shield, Download, FileText, Users, ClipboardList, CreditCard, XCircle, Activity } from 'lucide-react';
+import { CloudUpload, AlertCircle, CheckCircle, HelpCircle, ChevronDown, ChevronUp, Shield, Download, FileText, Users, ClipboardList, CreditCard, XCircle, Activity, MessageSquare, Send } from 'lucide-react';
 import RiskCard from '../components/RiskCard';
 import ClauseModal from '../components/ClauseModal';
 
@@ -14,6 +14,41 @@ const Dashboard = () => {
     const [selectedClause, setSelectedClause] = useState(null);
     const [summary, setSummary] = useState(null);
     const [summaryLoading, setSummaryLoading] = useState(false);
+
+    // Chat with Contract state
+    const [contractId, setContractId] = useState(null);
+    const [chatMessages, setChatMessages] = useState([]);
+    const [chatInput, setChatInput] = useState('');
+    const [chatLoading, setChatLoading] = useState(false);
+    const chatEndRef = useRef(null);
+
+    // Auto-scroll chat to bottom
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages, chatLoading]);
+
+    const handleSendChat = async () => {
+        const question = chatInput.trim();
+        if (!question || !contractId || chatLoading) return;
+
+        const userMsg = { role: 'user', content: question };
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatInput('');
+        setChatLoading(true);
+
+        try {
+            const res = await axios.post('http://localhost:8000/contract-chat', {
+                question,
+                contract_id: contractId
+            });
+            setChatMessages(prev => [...prev, { role: 'ai', content: res.data.answer }]);
+        } catch (err) {
+            console.error('Chat error:', err);
+            setChatMessages(prev => [...prev, { role: 'ai', content: 'Sorry, something went wrong. Please try again.' }]);
+        } finally {
+            setChatLoading(false);
+        }
+    };
 
     const [openSections, setOpenSections] = useState({
         high: true,
@@ -68,6 +103,12 @@ const Dashboard = () => {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setResult(response.data);
+
+            // Store contract_id for chat
+            if (response.data.contract_id) {
+                setContractId(response.data.contract_id);
+                setChatMessages([]);
+            }
 
             // Fetch summary in background
             if (response.data.extracted_text) {
@@ -150,6 +191,7 @@ const Dashboard = () => {
                                         <option value="tenant">Tenant</option>
                                         <option value="employee">Employee</option>
                                         <option value="freelancer">Freelancer</option>
+                                        <option value="land_owner">Land Owner</option>
                                     </select>
                                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
                                         <ChevronDown className="w-4 h-4" />
@@ -217,7 +259,7 @@ const Dashboard = () => {
                     <div className="flex justify-between items-center px-1">
                         <h2 className="text-2xl font-bold text-gray-900">Analysis Results</h2>
                         <button
-                            onClick={() => setResult(null)}
+                            onClick={() => { setResult(null); setContractId(null); setChatMessages([]); setChatInput(''); }}
                             className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-indigo-50"
                         >
                             ← Upload Another
@@ -396,6 +438,89 @@ const Dashboard = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Chat with Your Contract */}
+                    {contractId && (
+                        <div className="bg-white shadow-sm rounded-2xl border-2 border-indigo-200 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50/80 via-white to-violet-50/80">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
+                                        <MessageSquare className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold text-gray-900">Chat with Your Contract</h3>
+                                        <p className="text-xs text-gray-500">Ask questions about clauses, payment terms, termination conditions, or responsibilities in this contract.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Chat Messages */}
+                            <div className="p-4 h-80 overflow-y-auto chatbot-scroll bg-gray-50/50 space-y-3">
+                                {chatMessages.length === 0 && !chatLoading && (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                        <MessageSquare className="w-10 h-10 mb-2 opacity-40" />
+                                        <p className="text-sm font-medium">No messages yet</p>
+                                        <p className="text-xs mt-1">Ask a question about your contract to get started</p>
+                                    </div>
+                                )}
+
+                                {chatMessages.map((msg, idx) => (
+                                    <div
+                                        key={idx}
+                                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} chat-bubble-appear`}
+                                    >
+                                        <div
+                                            className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
+                                                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-br-md'
+                                                : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
+                                                }`}
+                                        >
+                                            {msg.content}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {chatLoading && (
+                                    <div className="flex justify-start chat-bubble-appear">
+                                        <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-2 h-2 bg-indigo-400 rounded-full typing-dot" style={{ animationDelay: '0ms' }} />
+                                                <div className="w-2 h-2 bg-indigo-400 rounded-full typing-dot" style={{ animationDelay: '200ms' }} />
+                                                <div className="w-2 h-2 bg-indigo-400 rounded-full typing-dot" style={{ animationDelay: '400ms' }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div ref={chatEndRef} />
+                            </div>
+
+                            {/* Chat Input */}
+                            <div className="px-4 py-3 border-t border-gray-100 bg-white">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={chatInput}
+                                        onChange={e => setChatInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendChat(); } }}
+                                        placeholder="Ask questions about this contract..."
+                                        className="flex-1 px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                                        disabled={chatLoading}
+                                    />
+                                    <button
+                                        onClick={handleSendChat}
+                                        disabled={chatLoading || !chatInput.trim()}
+                                        className={`p-2.5 rounded-xl transition-all ${chatLoading || !chatInput.trim()
+                                            ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:shadow-lg hover:shadow-indigo-500/25 active:scale-95'
+                                            }`}
+                                    >
+                                        <Send className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
